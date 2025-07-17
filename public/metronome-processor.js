@@ -7,12 +7,15 @@ class MetronomeProcessor extends AudioWorkletProcessor {
     this.nextBeatTime = 0
     this.beatNumber = 0
     this.beatsPerMeasure = 4
+    this.currentBeatForSound = -1
     
     this.port.onmessage = (e) => {
       if (e.data.command === 'start') {
         this.isPlaying = true
         this.nextBeatTime = currentTime + 0.1
         this.beatNumber = 0
+        this.currentBeatForSound = -1
+        this.phase = 1000 // Start with a high phase to prevent immediate sound
       } else if (e.data.command === 'stop') {
         this.isPlaying = false
         this.beatNumber = 0
@@ -40,20 +43,33 @@ class MetronomeProcessor extends AudioWorkletProcessor {
         const currentSampleTime = currentTime + i / sampleRate
         
         if (currentSampleTime >= this.nextBeatTime) {
+          this.currentBeatForSound = this.beatNumber
+          
           this.port.postMessage({
             beatNumber: this.beatNumber,
             time: this.nextBeatTime
           })
           
+          this.phase = 0
           this.nextBeatTime += secondsPerBeat
           this.beatNumber = (this.beatNumber + 1) % this.beatsPerMeasure
-          this.phase = 0
         }
         
-        const frequency = this.beatNumber === 0 ? 880 : 440
-        const envelope = Math.exp(-3 * this.phase)
+        // Higher frequency for first beat (3000Hz), lower for others (2000Hz)
+        const frequency = this.currentBeatForSound === 0 ? 3000 : 2000
         
-        outputChannel[i] = Math.sin(2 * Math.PI * frequency * this.phase) * envelope * 0.3
+        // Fast attack envelope: immediate rise, then exponential decay
+        let envelope = 0
+        if (this.phase < 0.002) {
+          // 2ms attack (linear ramp up)
+          envelope = this.phase / 0.002 * 0.5
+        } else if (this.phase < 0.05) {
+          // Exponential decay from 2ms to 50ms
+          const decayPhase = (this.phase - 0.002) / (0.05 - 0.002)
+          envelope = 0.5 * Math.exp(-decayPhase * 5)
+        }
+        
+        outputChannel[i] = Math.sin(2 * Math.PI * frequency * this.phase) * envelope
         
         this.phase += 1 / sampleRate
       }

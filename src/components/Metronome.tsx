@@ -20,8 +20,9 @@ const Metronome = () => {
         try {
           await audioContextRef.current.audioWorklet.addModule('/metronome-processor.js')
           useWorklet.current = true
-        } catch {
-          console.warn('AudioWorklet not supported, falling back to traditional scheduling')
+          console.log('AudioWorklet initialized successfully')
+        } catch (error) {
+          console.warn('AudioWorklet not supported, falling back to traditional scheduling', error)
           useWorklet.current = false
         }
       }
@@ -89,15 +90,19 @@ const Metronome = () => {
     const osc = audioContextRef.current!.createOscillator()
     const envelope = audioContextRef.current!.createGain()
     
-    osc.frequency.value = beatNumber === 0 ? 880 : 440
-    envelope.gain.value = 0.3
-    envelope.gain.exponentialRampToValueAtTime(0.01, time + 0.1)
+    // Higher frequency for first beat (3000Hz), lower for others (2000Hz)
+    osc.frequency.value = beatNumber === 0 ? 3000 : 2000
+    
+    // Fast attack with sharp exponential decay
+    envelope.gain.setValueAtTime(0, time)
+    envelope.gain.linearRampToValueAtTime(0.5, time + 0.002) // 2ms attack
+    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05) // 50ms total duration
     
     osc.connect(envelope)
     envelope.connect(audioContextRef.current!.destination)
     
     osc.start(time)
-    osc.stop(time + 0.1)
+    osc.stop(time + 0.06)
   }
 
   const scheduler = () => {
