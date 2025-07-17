@@ -90,19 +90,18 @@ const Metronome = () => {
     const osc = audioContextRef.current!.createOscillator()
     const envelope = audioContextRef.current!.createGain()
     
-    // Higher frequency for first beat (3000Hz), lower for others (2000Hz)
-    osc.frequency.value = beatNumber === 0 ? 3000 : 2000
+    // Based on cwilso's metronome: accent beat at 880Hz, regular at 440Hz
+    osc.frequency.value = beatNumber === 0 ? 880 : 440
     
-    // Fast attack with sharp exponential decay
-    envelope.gain.setValueAtTime(0, time)
-    envelope.gain.linearRampToValueAtTime(0.5, time + 0.002) // 2ms attack
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05) // 50ms total duration
+    // Simple envelope: immediate attack, fixed duration
+    envelope.gain.value = 0.3
+    envelope.gain.exponentialRampToValueAtTime(0.01, time + 0.03)
     
     osc.connect(envelope)
     envelope.connect(audioContextRef.current!.destination)
     
     osc.start(time)
-    osc.stop(time + 0.06)
+    osc.stop(time + 0.03)
   }
 
   const scheduler = () => {

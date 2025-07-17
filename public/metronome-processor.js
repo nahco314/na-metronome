@@ -55,18 +55,14 @@ class MetronomeProcessor extends AudioWorkletProcessor {
           this.beatNumber = (this.beatNumber + 1) % this.beatsPerMeasure
         }
         
-        // Higher frequency for first beat (3000Hz), lower for others (2000Hz)
-        const frequency = this.currentBeatForSound === 0 ? 3000 : 2000
+        // Based on cwilso's metronome: accent beat at 880Hz, regular at 440Hz
+        const frequency = this.currentBeatForSound === 0 ? 880 : 440
         
-        // Fast attack envelope: immediate rise, then exponential decay
+        // Simple envelope with exponential decay
         let envelope = 0
-        if (this.phase < 0.002) {
-          // 2ms attack (linear ramp up)
-          envelope = this.phase / 0.002 * 0.5
-        } else if (this.phase < 0.05) {
-          // Exponential decay from 2ms to 50ms
-          const decayPhase = (this.phase - 0.002) / (0.05 - 0.002)
-          envelope = 0.5 * Math.exp(-decayPhase * 5)
+        if (this.phase < 0.03) {
+          // Exponential decay over 30ms
+          envelope = 0.3 * Math.exp(-this.phase * 50)
         }
         
         outputChannel[i] = Math.sin(2 * Math.PI * frequency * this.phase) * envelope
