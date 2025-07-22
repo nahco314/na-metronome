@@ -1,0 +1,13 @@
+name = "na-metronome"
+main = "worker.js"
+compatibility_date = "2025-01-22"
+account_id = "bf93cf4b0d2c06b2b2d7243053edbf52"
+
+[site]
+bucket = "./dist"
+
+[build]
+command = "bun run build"
+
+[dev]
+port = 8787
